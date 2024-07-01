@@ -12,6 +12,10 @@ const UserSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true
+  },
+  handle: {
+    type: Buffer,
+    required: false  // Can be added later
   }
 });
 

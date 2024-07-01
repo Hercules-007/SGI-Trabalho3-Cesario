@@ -1,0 +1,87 @@
+<%- include("header") -%>
+<h4>Welcome to the passkey registration page <%= user.username %>!</h4>
+
+<form action="/signup/public-key/challenge" id="sign-up-form" method="post">
+  <div class="row g-4 m-3 align-items-center">
+    <p>For convenience, we have already filled in your username and email.</p>
+    <div class="col-4">
+      <input type="text" name="username" class="form-control" id="disabledInput" placeholder="<%= user.username %>" value="<%= user.username %>" aria-label="Username" >
+    </div>
+    <div class="col-4">
+      <input type="text" name="email" class="form-control" placeholder="<%= user.email %>" value="<%= user.email %>" aria-label="Email" >
+    </div>
+    <div class="col-4">
+      <input name="googleId" class="form-control" placeholder="<%= user.googleId %>" value="<%= user.googleId %>" aria-label="Email" >
+    </div>
+    <div class="col-4">
+      <!-- <input type="hidden" name="_csrf" value="<%= csrfToken %>"> -->
+      <button type="submit" class="btn btn-outline-secondary">Register Passkey</button>
+    </div>
+  </div>
+</form>
+  
+<script type="text/javascript" src="/js/register.js"></script>
+<script type="text/javascript" src="/js/base64url.js"></script>
+
+<script>
+  // Check if platform authenticator is available
+  window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(
+          result => {
+            if (!result) {
+              console.log("No platform authenticator found. If your OS does not come with one, try using devtools to set one up.");
+            }
+          }
+  );
+
+
+  let abortController;
+  let abortSignal;
+
+  let startConditionalRequest = async () => {
+    if (window.PublicKeyCredential.isConditionalMediationAvailable) {
+      console.log("Conditional UI is understood by the browser");
+      if (!await window.PublicKeyCredential.isConditionalMediationAvailable()) {
+        console.log("Conditional UI is understood by your browser but not available");
+        return;
+      }
+    } else {
+      if (!navigator.credentials.conditionalMediationSupported) {
+        console.log("Your browser does not implement Conditional UI (are you running the right chrome/safari version with the right flags?)");
+        return;
+      } else {
+        console.log("This browser understand the old version of Conditional UI feature detection");
+      }
+    }
+    abortController = new AbortController();
+    abortSignal = abortController.signal;
+
+    try {
+      let credential = await window.navigator.credentials.get({
+        signal: abortSignal,
+        publicKey: {
+          // Don't do this in production!
+          challenge: new Uint8Array([1, 2, 3, 4]),
+          allowCredentials: []
+        },
+        mediation: "conditional"
+      });
+      if (credential) {
+        let username = String.fromCodePoint(...new Uint8Array(credential.response.userHandle));
+        console.log(username);
+      } else {
+        console.log("Credential returned null");
+      }
+    } catch (error) {
+      if (error.name == "AbortError") {
+        console.log("request aborted");
+        return;
+      }
+      console.log(error.toString());
+    }
+  }
+
+  startConditionalRequest();
+</script>
+
+</body>
+</html>

@@ -2,12 +2,13 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const mongoose = require('mongoose');
 const User = require('../models/User');
+const Fido2Strategy = require('passport-fido2-webauthn').Strategy;
 
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: 'https://sgi-trabalho2-cesario-v2.vercel.app/auth/google/callback'
-  // callbackURL: '/auth/google/callback'
+  // callbackURL: 'https://sgi-trabalho2-cesario-v2.vercel.app/auth/google/callback'
+  callbackURL: '/auth/google/callback'
 }, async (accessToken, refreshToken, profile, done) => {
   const newUser = {
     googleId: profile.id,
@@ -41,3 +42,18 @@ passport.deserializeUser(async (id, done) => {
     done(err, null);
   }
 });
+
+
+// Configuração do WebAuthn
+passport.use(new Fido2Strategy(
+  async (user, done) => {
+    // Implementar busca de credenciais do usuário no banco
+    const credentials = await findUserCredentials(user.email);
+    done(null, credentials);
+  },
+  async (user, challenge, done) => {
+    // Implementar verificação do challenge
+    const isValid = await verifyUserChallenge(user.email, challenge);
+    done(null, isValid);
+  }
+));
